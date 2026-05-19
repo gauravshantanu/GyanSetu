@@ -3,9 +3,18 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { User } from '@supabase/supabase-js'
 import { useLang } from '@/lib/lang-context'
+
+const supabaseReady = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http') ?? false
+
+function getSupabaseClient() {
+  if (!supabaseReady) return null
+  try {
+    const { createClientComponentClient } = require('@supabase/auth-helpers-nextjs')
+    return createClientComponentClient()
+  } catch { return null }
+}
 
 const navLinks = [
   { href: '/lectures',        en: 'Lectures',        hi: 'व्याख्यान' },
@@ -18,22 +27,23 @@ const navLinks = [
 export default function Navbar() {
   const { lang, setLang, t } = useLang()
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [supabase] = useState(() => getSupabaseClient())
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data }: any) => setUser(data.session?.user ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_: any, session: any) => {
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
   }, [supabase])
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    await supabase?.auth.signOut()
     setUserMenuOpen(false)
     router.push('/')
     router.refresh()

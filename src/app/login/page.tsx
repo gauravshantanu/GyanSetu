@@ -2,14 +2,21 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useLang } from '@/lib/lang-context'
+
+const supabaseReady = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http') ?? false
 
 export default function LoginPage() {
   const { t } = useLang()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const [supabase] = useState(() => {
+    if (!supabaseReady) return null
+    try {
+      const { createClientComponentClient } = require('@supabase/auth-helpers-nextjs')
+      return createClientComponentClient()
+    } catch { return null }
+  })
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,6 +26,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
 
   async function handleGoogleLogin() {
+    if (!supabase) return setError('Supabase not configured. Add NEXT_PUBLIC_SUPABASE_URL to .env.local')
     setGoogleLoading(true)
     setError('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -30,6 +38,7 @@ export default function LoginPage() {
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
+    if (!supabase) return setError('Supabase not configured. Add NEXT_PUBLIC_SUPABASE_URL to .env.local')
     setLoading(true)
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })

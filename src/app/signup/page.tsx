@@ -2,16 +2,23 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
 import { useLang } from '@/lib/lang-context'
+
+const supabaseReady = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http') ?? false
 
 type ExamGoal = 'UPSC' | 'NEET'
 
 export default function SignupPage() {
   const { t, lang } = useLang()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const [supabase] = useState(() => {
+    if (!supabaseReady) return null
+    try {
+      const { createClientComponentClient } = require('@supabase/auth-helpers-nextjs')
+      return createClientComponentClient()
+    } catch { return null }
+  })
 
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
@@ -26,6 +33,7 @@ export default function SignupPage() {
   const [error, setError] = useState('')
 
   async function handleGoogleSignup() {
+    if (!supabase) return setError('Supabase not configured. Add NEXT_PUBLIC_SUPABASE_URL to .env.local')
     setGoogleLoading(true)
     setError('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -51,6 +59,7 @@ export default function SignupPage() {
       setError(t('Please select your exam goal', 'कृपया अपना परीक्षा लक्ष्य चुनें'))
       return
     }
+    if (!supabase) return setError('Supabase not configured. Add NEXT_PUBLIC_SUPABASE_URL to .env.local')
     setLoading(true)
     setError('')
 
