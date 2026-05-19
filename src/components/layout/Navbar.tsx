@@ -1,7 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { User } from '@supabase/supabase-js'
 import { useLang } from '@/lib/lang-context'
 
 const navLinks = [
@@ -14,7 +17,30 @@ const navLinks = [
 
 export default function Navbar() {
   const { lang, setLang, t } = useLang()
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+
   const [menuOpen, setMenuOpen] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [supabase])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    setUserMenuOpen(false)
+    router.push('/')
+    router.refresh()
+  }
+
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Student'
+  const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
     <>
@@ -59,16 +85,54 @@ export default function Navbar() {
             </button>
           </div>
 
-          <Link href="/login">
-            <button className="bg-transparent border border-[#d1d5db] text-[#0f172a] px-4 py-[7px] rounded-lg text-sm font-medium cursor-pointer hover:border-[#E8630A] hover:text-[#E8630A] transition-all">
-              {t('Log in', 'लॉगिन')}
-            </button>
-          </Link>
-          <Link href="/signup">
-            <button className="bg-[#E8630A] text-white border-none px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-[#c4520a] transition-colors">
-              {t('Start Free →', 'शुरू करें →')}
-            </button>
-          </Link>
+          {user ? (
+            /* Logged in — avatar + dropdown */
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-1 rounded-xl hover:bg-[#f7f8fa] transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#E8630A] text-white text-xs font-bold flex items-center justify-center">
+                  {initials}
+                </div>
+                <span className="text-sm font-medium text-[#0f172a] max-w-[90px] truncate">{displayName}</span>
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl border border-[#e8eaed] shadow-lg py-1 z-50">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#f7f8fa] no-underline transition-colors"
+                  >
+                    <LayoutDashboard size={14} className="text-[#64748b]" />
+                    {t('Dashboard', 'डैशबोर्ड')}
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 bg-transparent border-none cursor-pointer transition-colors"
+                  >
+                    <LogOut size={14} />
+                    {t('Log out', 'लॉगआउट')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Logged out — Login + Start Free */
+            <>
+              <Link href="/login">
+                <button className="bg-transparent border border-[#d1d5db] text-[#0f172a] px-4 py-[7px] rounded-lg text-sm font-medium cursor-pointer hover:border-[#E8630A] hover:text-[#E8630A] transition-all">
+                  {t('Log in', 'लॉगिन')}
+                </button>
+              </Link>
+              <Link href="/signup">
+                <button className="bg-[#E8630A] text-white border-none px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-[#c4520a] transition-colors">
+                  {t('Start Free →', 'शुरू करें →')}
+                </button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -89,6 +153,29 @@ export default function Navbar() {
             <button onClick={() => setLang('en')} className={`px-4 py-2 rounded-lg text-sm font-semibold border cursor-pointer ${lang === 'en' ? 'bg-[#E8630A] text-white border-[#E8630A]' : 'bg-white text-[#64748b] border-[#e8eaed]'}`}>English</button>
             <button onClick={() => setLang('hi')} className={`px-4 py-2 rounded-lg text-sm font-semibold border cursor-pointer font-hindi ${lang === 'hi' ? 'bg-[#E8630A] text-white border-[#E8630A]' : 'bg-white text-[#64748b] border-[#e8eaed]'}`}>हिंदी</button>
           </div>
+          {user ? (
+            <div className="flex flex-col gap-1 pt-2 border-t border-[#e8eaed] mt-1">
+              <Link href="/dashboard" className="text-sm text-[#0f172a] font-medium no-underline py-1" onClick={() => setMenuOpen(false)}>
+                {t('Dashboard', 'डैशबोर्ड')}
+              </Link>
+              <button onClick={handleLogout} className="text-left text-sm text-red-600 bg-transparent border-none cursor-pointer py-1">
+                {t('Log out', 'लॉगआउट')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 pt-2 border-t border-[#e8eaed] mt-1">
+              <Link href="/login" className="flex-1" onClick={() => setMenuOpen(false)}>
+                <button className="w-full py-2 rounded-lg border border-[#e8eaed] text-sm font-semibold text-[#0f172a] bg-white cursor-pointer">
+                  {t('Log in', 'लॉगिन')}
+                </button>
+              </Link>
+              <Link href="/signup" className="flex-1" onClick={() => setMenuOpen(false)}>
+                <button className="w-full py-2 rounded-lg bg-[#E8630A] text-white text-sm font-semibold border-none cursor-pointer">
+                  {t('Start Free', 'शुरू करें')}
+                </button>
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </>
