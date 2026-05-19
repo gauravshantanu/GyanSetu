@@ -31,6 +31,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
   async function handleGoogleSignup() {
     if (!supabase) return setError('Supabase not configured. Add NEXT_PUBLIC_SUPABASE_URL to .env.local')
@@ -78,17 +79,28 @@ export default function SignupPage() {
     }
 
     if (data.user) {
-      await supabase.from('students').upsert({
-        id: data.user.id,
-        email,
-        name,
-        exam_goal: examGoal,
-        exam_year: examYear,
-        preferred_lang: prefLang,
-        streak: 0,
-      })
-      router.push('/dashboard')
-      router.refresh()
+      // Save profile — ignore error if students table not created yet
+      try {
+        await supabase.from('students').upsert({
+          id: data.user.id,
+          email,
+          name,
+          exam_goal: examGoal,
+          exam_year: examYear,
+          preferred_lang: prefLang,
+          streak: 0,
+        })
+      } catch {}
+
+      // If session exists → logged in directly, go to dashboard
+      // If no session → email confirmation required
+      if (data.session) {
+        router.push('/')
+        router.refresh()
+      } else {
+        setSuccess(true)
+        setLoading(false)
+      }
     }
   }
 
@@ -97,6 +109,38 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-[calc(100vh-62px)] bg-[#f7f8fa] flex items-center justify-center px-4 py-12">
+
+      {/* Email confirmation popup */}
+      {success && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)'}}>
+          <div className="bg-white rounded-2xl border border-[#e8eaed] p-8 shadow-xl max-w-sm w-full text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 rounded-full bg-[#fff5ef] flex items-center justify-center text-3xl mx-auto mb-4">📧</div>
+            <h2 className="text-xl font-bold text-[#0f172a] mb-2">
+              {t('Check your email!', 'अपना ईमेल देखें!')}
+            </h2>
+            <p className="text-sm text-[#64748b] mb-2">
+              {t('We sent a confirmation link to', 'हमने confirmation link भेजा है')}
+            </p>
+            <p className="text-sm font-semibold text-[#E8630A] mb-5">{email}</p>
+            <p className="text-xs text-[#94a3b8] mb-6">
+              {t(
+                'Click the link in the email to activate your account, then log in.',
+                'ईमेल में दिए link पर क्लिक करें, फिर लॉगिन करें।'
+              )}
+            </p>
+            <Link
+              href="/login"
+              className="block bg-[#E8630A] text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-[#c4520a] transition-colors no-underline"
+            >
+              {t('Go to Login →', 'लॉगिन पर जाएं →')}
+            </Link>
+            <p className="text-xs text-[#94a3b8] mt-3">
+              {t("Didn't get it? Check spam folder.", 'नहीं मिला? Spam folder देखें।')}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-[460px]">
 
         <div className="bg-white rounded-2xl border border-[#e8eaed] p-8 shadow-sm">
