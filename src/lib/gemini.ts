@@ -1,31 +1,40 @@
-// Gemini AI helper — uses Google's free tier
-// Get your free API key at: https://aistudio.google.com
+// AI helper — uses Groq (free tier, no billing needed)
+// Get your free API key at: https://console.groq.com
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_MODEL = 'llama-3.3-70b-versatile'
 
-export async function askGemini(prompt: string, lang: 'en' | 'hi' = 'en'): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set in .env.local')
+async function callGroq(systemPrompt: string, userPrompt: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error('GROQ_API_KEY not set in .env.local')
 
-  const systemPrompt = lang === 'hi'
-    ? `आप GyanSetu के UPSC और NEET AI शिक्षक हैं। हिंदी में स्पष्ट और सरल भाषा में उत्तर दें। UPSC परीक्षा के संदर्भ में उत्तर दें। पिछले वर्षों के प्रश्नों का संदर्भ दें।`
-    : `You are GyanSetu's UPSC and NEET AI tutor. Give clear, concise answers in the context of UPSC/NEET exam preparation. Reference previous year questions when relevant. Keep answers structured and exam-focused.`
-
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+  const response = await fetch(GROQ_API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      contents: [
-        { role: 'user', parts: [{ text: systemPrompt }] },
-        { role: 'model', parts: [{ text: lang === 'hi' ? 'बिल्कुल! मैं आपकी मदद करूँगा।' : 'Understood! I will help you with UPSC/NEET preparation.' }] },
-        { role: 'user', parts: [{ text: prompt }] },
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+      max_tokens: 1024,
+      temperature: 0.7,
     }),
   })
 
   const data = await response.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, could not get a response.'
+  if (data.error) throw new Error(data.error.message)
+  return data.choices?.[0]?.message?.content || 'Sorry, could not get a response.'
+}
+
+export async function askGemini(prompt: string, lang: 'en' | 'hi' = 'en'): Promise<string> {
+  const systemPrompt = lang === 'hi'
+    ? `आप GyanSetu के UPSC और NEET AI शिक्षक हैं। हिंदी में स्पष्ट और सरल भाषा में उत्तर दें। UPSC परीक्षा के संदर्भ में उत्तर दें।`
+    : `You are GyanSetu's UPSC and NEET AI tutor. Give clear, concise answers for exam preparation. Keep answers structured and exam-focused.`
+  return callGroq(systemPrompt, prompt)
 }
 
 export async function generateMCQs(topic: string, lang: 'en' | 'hi' = 'en', count = 5): Promise<any[]> {
