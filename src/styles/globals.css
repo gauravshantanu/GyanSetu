@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --saffron: #E8630A;
+  --saffron2: #c4520a;
+  --saffron-lt: #fff4ee;
+  --saffron-md: #fde2cc;
+  --green: #128807;
+  --green-lt: #edfaf0;
+  --blue: #1d4ed8;
+  --blue-lt: #eff6ff;
+  --navy: #1a237e;
+  --text: #0f172a;
+  --text2: #64748b;
+  --text3: #94a3b8;
+  --bg: #ffffff;
+  --bg2: #f7f8fa;
+  --bg3: #f0f2f5;
+  --border: #e8eaed;
+  --border2: #d1d5db;
+  --radius: 12px;
+  --radius-lg: 18px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body.hindi {
+  font-family: 'Tiro Devanagari Hindi', 'Noto Sans Devanagari', serif;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* Hindi font utility */
+.font-hindi { font-family: 'Tiro Devanagari Hindi', 'Noto Sans Devanagari', serif; }
+.font-display { font-family: 'Fraunces', Georgia, serif; }
+
+/* Language visibility */
+.en-content { display: block; }
+.hi-content { display: none; }
+body.hindi .en-content { display: none; }
+body.hindi .hi-content { display: block; }
+
+/* Inline language spans */
+span.en-content { display: inline; }
+span.hi-content { display: none; }
+body.hindi span.en-content { display: none; }
+body.hindi span.hi-content { display: inline; }
+
+/* Scrollbar for playlist */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
